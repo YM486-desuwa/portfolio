@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>叶茂 // 信号波 · 个人简历</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          void: '#050a14',
+          panel: '#0a1424',
+          signal: '#fbbf24',
+          amber: '#f59e0b',
+          cyan: '#22d3ee',
+        },
+        fontFamily: {
+          mono: ['"Share Tech Mono"', 'monospace'],
+          sans: ['"Noto Sans SC"', 'system-ui', 'sans-serif'],
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body {
+    background: #050a14;
+    color: #cbd5e1;
+    font-family: 'Noto Sans SC', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ===== ECG / 正弦波横贯背景 ===== */
+  .ecg-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    overflow: hidden;
+  }
+  .ecg-line {
+    position: absolute; left: -10%; width: 120%; height: 120px;
+    opacity: 0.07;
+  }
+  .ecg-line svg { width: 100%; height: 100%; display: block; }
+  .ecg-line path {
+    fill: none; stroke: #fbbf24; stroke-width: 1.5;
+    stroke-dasharray: 2000; stroke-dashoffset: 2000;
+    animation: ecg-flow 14s linear infinite;
+  }
+  .ecg-line.l2 path { animation-delay: -5s; animation-duration: 18s; opacity: .6; }
+  .ecg-line.l3 path { animation-delay: -9s; animation-duration: 22s; opacity: .4; }
+  @keyframes ecg-flow {
+    0%   { stroke-dashoffset: 2000; }
+    100% { stroke-dashoffset: -2000; }
+  }
+
+  /* 网格底纹 */
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(251,191,36,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(251,191,36,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 75%);
+  }
+
+  /* ===== 头像信号波纹 ===== */
+  .avatar-wrap { position: relative; width: 168px; height: 168px; }
+  .avatar-ring {
+    position: absolute; inset: 0; border-radius: 9999px;
+    border: 1.5px solid rgba(251,191,36,0.5);
+    animation: pulse-ring 2.6s ease-out infinite;
+  }
+  .avatar-ring.r2 { animation-delay: .9s; }
+  .avatar-ring.r3 { animation-delay: 1.8s; }
+  @keyframes pulse-ring {
+    0%   { transform: scale(1);   opacity: .8; }
+    100% { transform: scale(1.55); opacity: 0; }
+  }
+  .avatar-core {
+    position: relative; z-index: 2; width: 100%; height: 100%;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 30% 30%, #451a03, #2a1408);
+    border: 2px solid #fbbf24;
+    box-shadow: 0 0 30px rgba(251,191,36,0.4), inset 0 0 20px rgba(251,191,36,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 64px; color: #fbbf24; font-weight: 900;
+  }
+
+  /* ===== 频道标题 ===== */
+  .ch-label {
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.15em;
+  }
+
+  /* ===== 频谱柱状图（技能） ===== */
+  .spectrum { display: flex; align-items: flex-end; gap: 3px; height: 56px; }
+  .bar {
+    flex: 1; background: linear-gradient(to top, #fbbf24, #fde68a);
+    border-radius: 2px 2px 0 0; min-height: 4px;
+    animation: bar-bounce 1.4s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(251,191,36,0.4);
+  }
+  @keyframes bar-bounce {
+    0%, 100% { transform: scaleY(1); }
+    50%      { transform: scaleY(0.55); }
+  }
+
+  /* ===== 七段数码管数字（冷青 · 数据高亮点缀） ===== */
+  .seg {
+    font-family: 'Share Tech Mono', monospace;
+    color: #22d3ee;
+    text-shadow: 0 0 6px rgba(34,211,238,0.8), 0 0 18px rgba(34,211,238,0.4);
+  }
+
+  /* ===== 信号发射点（时间轴） ===== */
+  .tx-dot {
+    position: relative; width: 14px; height: 14px; border-radius: 9999px;
+    background: #fbbf24; box-shadow: 0 0 10px #fbbf24;
+    flex-shrink: 0;
+  }
+  .tx-dot::after {
+    content: ''; position: absolute; inset: -6px; border-radius: 9999px;
+    border: 1px solid rgba(251,191,36,0.5);
+    animation: pulse-ring 2s ease-out infinite;
+  }
+
+  /* ===== 滚动显现 ===== */
+  .reveal {
+    opacity: 0; transform: translateY(28px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ===== 卡片悬停：波纹扩散光晕 ===== */
+  .glow-card {
+    position: relative; transition: transform .3s ease, box-shadow .3s ease;
+    background: rgba(10,20,36,0.7);
+    border: 1px solid rgba(251,191,36,0.15);
+    backdrop-filter: blur(6px);
+  }
+  .glow-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0 0 1px rgba(251,191,36,0.5), 0 12px 40px rgba(251,191,36,0.18);
+  }
+
+  /* 复制成功提示 */
+  .copy-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #0a1424; border: 1px solid #fbbf24; color: #fbbf24;
+    padding: 10px 20px; border-radius: 8px; font-family: 'Share Tech Mono', monospace;
+    font-size: 14px; z-index: 100; transition: transform .3s ease;
+    box-shadow: 0 0 20px rgba(251,191,36,0.3);
+  }
+  .copy-toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* 打字机光标 */
+  .cursor::after {
+    content: '_'; animation: blink 1s steps(1) infinite; color: #fbbf24;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  ::selection { background: rgba(251,191,36,0.3); color: #fff; }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #050a14; }
+  ::-webkit-scrollbar-thumb { background: #78350f; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
+</style>
+</head>
+<body class="relative">
+
+<!-- 背景层 -->
+<div class="grid-bg"></div>
+<div class="ecg-bg">
+  <div class="ecg-line" style="top:18%"><svg viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0,60 L120,60 L150,60 L170,10 L190,110 L210,60 L360,60 L390,60 L410,20 L430,100 L450,60 L600,60 L630,60 L650,5 L670,115 L690,60 L840,60 L870,60 L890,25 L910,95 L930,60 L1080,60 L1110,60 L1130,15 L1150,105 L1170,60 L1440,60"/></svg></div>
+  <div class="ecg-line l2" style="top:52%"><svg viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0,60 L100,60 L130,40 L160,80 L190,60 L340,60 L370,30 L400,90 L430,60 L580,60 L610,20 L640,100 L670,60 L820,60 L850,35 L880,85 L910,60 L1060,60 L1090,25 L1120,95 L1150,60 L1440,60"/></svg></div>
+  <div class="ecg-line l3" style="top:78%"><svg viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0,60 L140,60 L170,60 L190,15 L210,105 L230,60 L380,60 L410,60 L430,30 L450,90 L470,60 L620,60 L650,60 L670,10 L690,110 L710,60 L860,60 L890,60 L910,25 L930,95 L950,60 L1100,60 L1130,60 L1150,20 L1170,100 L1190,60 L1440,60"/></svg></div>
+</div>
+
+<!-- 顶栏信号指示 -->
+<header class="relative z-10 max-w-5xl mx-auto px-5 pt-6 flex items-center justify-between">
+  <span class="ch-label text-xs text-signal/70">SIGNAL · STRENGTH ████████░░ 86%</span>
+  <span class="ch-label text-xs text-signal/70" id="clock">--:--:--</span>
+</header>
+
+<main class="relative z-10 max-w-5xl mx-auto px-5 pb-24">
+
+  <!-- ============ HERO ============ -->
+  <section class="pt-16 pb-24 flex flex-col md:flex-row items-center gap-12">
+    <div class="avatar-wrap">
+      <span class="avatar-ring"></span>
+      <span class="avatar-ring r2"></span>
+      <span class="avatar-ring r3"></span>
+      <div class="avatar-core">叶</div>
+    </div>
+    <div class="text-center md:text-left flex-1">
+      <p class="ch-label text-signal text-sm mb-3 tracking-widest">// FRESHMAN · 南京工程学院 · 通信工程</p>
+      <h1 class="text-5xl md:text-6xl font-black text-white mb-2">叶茂 <span class="text-signal">YE MAO</span></h1>
+      <p class="ch-label text-xl text-signal/90 mb-5 cursor" id="typer"></p>
+      <p class="text-slate-300 leading-relaxed max-w-xl">
+        通信工程大一在读 · AI 工具爱好者 · 独立游戏开发者。<br>
+        用 vibe coding 从零搭出这个网站，无前端基础——
+        我不是已完成的成品，是一个<span class="text-signal">正在接收信号、持续调频</span>的系统。
+      </p>
+      <div class="flex flex-wrap gap-3 justify-center md:justify-start mt-6">
+        <a href="#contact" class="px-5 py-2.5 rounded-lg bg-signal/10 border border-signal text-signal ch-label text-sm hover:bg-signal/20 transition">建立连接 ↗</a>
+        <a href="#projects" class="px-5 py-2.5 rounded-lg border border-slate-600 text-slate-300 ch-label text-sm hover:border-signal hover:text-signal transition">查看作品</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CH.01 关于我 ============ -->
+  <section class="reveal mb-28">
+    <div class="flex items-baseline gap-3 mb-8">
+      <span class="ch-label text-signal text-lg">CH.01</span>
+      <span class="ch-label text-slate-500">//</span>
+      <h2 class="text-2xl font-bold text-white">关于我 <span class="ch-label text-xs text-slate-500 ml-2">SELF_PROFILE</span></h2>
+    </div>
+    <div class="glow-card rounded-xl p-6 md:p-8">
+      <p class="text-slate-300 leading-loose mb-6">
+        南京工程学院 · 通信工程大一在读。相信「<span class="text-signal">刚上路 + 有方法 + 有行动证据</span>」就是最好的状态。
+        做过 30+ 小时一对一家教，带过高一物理和数学；课余用 AI 工具独立开发了一款网页飞机大战游戏。
+        正在把「想到」变成「做到」，这个网站就是我的 01 号作品。
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="border-l-2 border-signal pl-4">
+          <p class="ch-label text-xs text-slate-500 mb-1">物理</p>
+          <p class="text-3xl font-bold text-white">85<span class="text-signal text-lg">%</span></p>
+          <div class="spectrum mt-2" data-level="85"></div>
+        </div>
+        <div class="border-l-2 border-signal pl-4">
+          <p class="ch-label text-xs text-slate-500 mb-1">学习能力</p>
+          <p class="text-3xl font-bold text-white">90<span class="text-signal text-lg">'</span></p>
+          <div class="spectrum mt-2" data-level="90"></div>
+        </div>
+        <div class="border-l-2 border-signal pl-4">
+          <p class="ch-label text-xs text-slate-500 mb-1">自驱力</p>
+          <p class="text-3xl font-bold text-white">MAX</p>
+          <div class="spectrum mt-2" data-level="100"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CH.02 实践经历 ============ -->
+  <section class="reveal mb-28">
+    <div class="flex items-baseline gap-3 mb-8">
+      <span class="ch-label text-signal text-lg">CH.02</span>
+      <span class="ch-label text-slate-500">//</span>
+      <h2 class="text-2xl font-bold text-white">实践经历 <span class="ch-label text-xs text-slate-500 ml-2">RUNTIME_LOG</span></h2>
+    </div>
+    <div class="relative pl-2">
+      <!-- 时间轴竖线 -->
+      <div class="absolute left-[6px] top-2 bottom-2 w-px bg-gradient-to-b from-signal/60 via-signal/20 to-transparent"></div>
+
+      <div class="flex gap-5 mb-8">
+        <span class="tx-dot mt-1.5"></span>
+        <div class="glow-card rounded-xl p-5 flex-1">
+          <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
+            <h3 class="font-bold text-white">一对一家教 · 高一物理 / 数学</h3>
+            <span class="ch-label text-xs text-signal/80">2025 — 至今</span>
+          </div>
+          <p class="text-slate-400 text-sm leading-relaxed">累计 <span class="text-signal font-bold">30+ 小时</span>一对一辅导，把自己的错题本和知识框架整理成讲义给学生用，两名学生从及格线提升到班级前 30%。</p>
+        </div>
+      </div>
+
+      <div class="flex gap-5 mb-8">
+        <span class="tx-dot mt-1.5"></span>
+        <div class="glow-card rounded-xl p-5 flex-1">
+          <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
+            <h3 class="font-bold text-white">霓虹战域 · 独立游戏开发</h3>
+            <span class="ch-label text-xs text-signal/80">2025 — 2026</span>
+          </div>
+          <p class="text-slate-400 text-sm leading-relaxed">从零设计并开发飞机大战网页游戏，纯静态零依赖，涵盖 Roguelike 升级系统、弹幕 Boss、程序化音效与移动端适配，<span class="text-signal font-bold">已部署 Netlify 上线</span>。</p>
+        </div>
+      </div>
+
+      <div class="flex gap-5">
+        <span class="tx-dot mt-1.5"></span>
+        <div class="glow-card rounded-xl p-5 flex-1">
+          <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
+            <h3 class="font-bold text-white">个人简历网站 · Vibe Coding</h3>
+            <span class="ch-label text-xs text-signal/80">2026.09</span>
+          </div>
+          <p class="text-slate-400 text-sm leading-relaxed">无前端基础，用 AI 工具从零搭建单文件个人站点，作为 01 号作品，持续迭代中。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CH.03 技能 ============ -->
+  <section class="reveal mb-28">
+    <div class="flex items-baseline gap-3 mb-8">
+      <span class="ch-label text-signal text-lg">CH.03</span>
+      <span class="ch-label text-slate-500">//</span>
+      <h2 class="text-2xl font-bold text-white">技能频谱 <span class="ch-label text-xs text-slate-500 ml-2">FREQUENCY_SCAN</span></h2>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="glow-card rounded-xl p-5">
+        <div class="flex justify-between mb-3"><span class="text-white font-medium">AI 工具应用</span><span class="ch-label text-signal text-sm">88%</span></div>
+        <div class="spectrum" data-level="88"></div>
+      </div>
+      <div class="glow-card rounded-xl p-5">
+        <div class="flex justify-between mb-3"><span class="text-white font-medium">知识整理 / 笔记</span><span class="ch-label text-signal text-sm">92%</span></div>
+        <div class="spectrum" data-level="92"></div>
+      </div>
+      <div class="glow-card rounded-xl p-5">
+        <div class="flex justify-between mb-3"><span class="text-white font-medium">物理 · 数学基础</span><span class="ch-label text-signal text-sm">85%</span></div>
+        <div class="spectrum" data-level="85"></div>
+      </div>
+      <div class="glow-card rounded-xl p-5">
+        <div class="flex justify-between mb-3"><span class="text-white font-medium">编程（学习中）</span><span class="ch-label text-signal text-sm">45%</span></div>
+        <div class="spectrum" data-level="45"></div>
+      </div>
+    </div>
+    <p class="ch-label text-xs text-slate-600 mt-4">※ 频谱柱状图实时起伏中 · 数值随迭代持续校准</p>
+  </section>
+
+  <!-- ============ CH.04 项目 & 活动 ============ -->
+  <section class="reveal mb-28">
+    <div class="flex items-baseline gap-3 mb-8">
+      <span class="ch-label text-signal text-lg">CH.04</span>
+      <span class="ch-label text-slate-500">//</span>
+      <h2 class="text-2xl font-bold text-white">项目 & 活动 <span class="ch-label text-xs text-slate-500 ml-2">PROJECT_LOG</span></h2>
+    </div>
+    <div class="grid md:grid-cols-2 gap-5">
+
+      <div class="glow-card rounded-xl overflow-hidden flex flex-col">
+        <div class="h-36 bg-gradient-to-br from-amber-900/40 to-void flex items-center justify-center border-b border-signal/15">
+          <i data-lucide="radio-tower" class="w-12 h-12 text-signal"></i>
+        </div>
+        <div class="p-5 flex flex-col flex-1">
+          <div class="flex gap-2 mb-2 flex-wrap">
+            <span class="ch-label text-[10px] px-2 py-0.5 rounded bg-signal/10 text-signal border border-signal/30">01号作品</span>
+            <span class="ch-label text-[10px] px-2 py-0.5 rounded bg-amber/10 text-amber border border-amber/30">VIBE CODING</span>
+          </div>
+          <h3 class="font-bold text-white text-lg mb-1">个人简历网站</h3>
+          <p class="text-slate-400 text-sm leading-relaxed mb-3 flex-1">用 AI 从零搭建的单文件个人站点，信号波主题，无前端基础。让网站本身成为作品集的第一件作品。</p>
+          <p class="ch-label text-xs text-cyan mb-3">成果：单文件部署 / 持续迭代中 / 冷暖混搭主题</p>
+          <a href="https://github.com/YM486-desuwa" target="_blank" rel="noopener" class="ch-label text-sm text-signal hover:underline self-start">查看仓库 →</a>
+        </div>
+      </div>
+
+      <div class="glow-card rounded-xl overflow-hidden flex flex-col">
+        <div class="h-36 bg-gradient-to-br from-cyan-900/40 to-void flex items-center justify-center border-b border-cyan/15">
+          <i data-lucide="rocket" class="w-12 h-12 text-cyan"></i>
+        </div>
+        <div class="p-5 flex flex-col flex-1">
+          <div class="flex gap-2 mb-2 flex-wrap">
+            <span class="ch-label text-[10px] px-2 py-0.5 rounded bg-cyan/10 text-cyan border border-cyan/30">独立游戏</span>
+            <span class="ch-label text-[10px] px-2 py-0.5 rounded bg-signal/10 text-signal border border-signal/30">Canvas</span>
+            <span class="ch-label text-[10px] px-2 py-0.5 rounded bg-signal/10 text-signal border border-signal/30">Web Audio</span>
+          </div>
+          <h3 class="font-bold text-white text-lg mb-1">霓虹战域 NEON STRIKERS</h3>
+          <p class="text-slate-400 text-sm leading-relaxed mb-3 flex-1">纯静态零依赖的飞机大战网页游戏。HTML5 Canvas + 原生 JS，Roguelike 三选一升级卡、弹幕 Boss 战、程序化合成音效与 BGM，竖版移动端适配，已部署上线。</p>
+          <p class="ch-label text-xs text-cyan mb-3">成果：37 模块打包 / 233KB 单文件 / 实测 60fps 零报错 / 在线可玩</p>
+          <a href="https://brilliant-mousse-a52542.netlify.app/" target="_blank" rel="noopener" class="ch-label text-sm text-cyan hover:underline self-start">在线试玩 →</a>
+        </div>
+      </div>
+
+      <div class="glow-card rounded-xl overflow-hidden flex flex-col opacity-80">
+        <div class="h-36 bg-panel/60 flex items-center justify-center border-b border-slate-700/40">
+          <i data-lucide="construction" class="w-10 h-10 text-slate-600"></i>
+        </div>
+        <div class="p-5 flex flex-col flex-1">
+          <span class="ch-label text-[10px] px-2 py-0.5 rounded bg-slate-700/30 text-slate-500 border border-slate-700 w-fit mb-2">LOADING…</span>
+          <h3 class="font-bold text-slate-400 text-lg mb-1">下一个作品 · 信号接收中</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">本学期解锁中：通信原理实验 / 开源小工具 / 竞赛项目。<br>保持频道开启，敬请期待。</p>
+        </div>
+      </div>
+
+      <div class="glow-card rounded-xl overflow-hidden flex flex-col opacity-80">
+        <div class="h-36 bg-panel/60 flex items-center justify-center border-b border-slate-700/40">
+          <i data-lucide="plus" class="w-10 h-10 text-slate-600"></i>
+        </div>
+        <div class="p-5 flex flex-col flex-1">
+          <span class="ch-label text-[10px] px-2 py-0.5 rounded bg-slate-700/30 text-slate-500 border border-slate-700 w-fit mb-2">RESERVED</span>
+          <h3 class="font-bold text-slate-400 text-lg mb-1">作品卡槽 · 待填充</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">这里预留给未来的你。每做出一个带数据成果的作品，就点亮这张卡。</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ CH.05 亮点战绩 ============ -->
+  <section class="reveal mb-28">
+    <div class="flex items-baseline gap-3 mb-8">
+      <span class="ch-label text-signal text-lg">CH.05</span>
+      <span class="ch-label text-slate-500">//</span>
+      <h2 class="text-2xl font-bold text-white">亮点战绩 <span class="ch-label text-xs text-slate-500 ml-2">TELEMETRY</span></h2>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="glow-card rounded-xl p-5 text-center">
+        <p class="seg text-4xl font-bold mb-1">30+</p>
+        <p class="text-xs text-slate-400 ch-label">辅导小时 [COMPLETED]</p>
+      </div>
+      <div class="glow-card rounded-xl p-5 text-center">
+        <p class="seg text-4xl font-bold mb-1">60</p>
+        <p class="text-xs text-slate-400 ch-label">游戏实测 FPS [STABLE]</p>
+      </div>
+      <div class="glow-card rounded-xl p-5 text-center">
+        <p class="seg text-4xl font-bold mb-1">233K</p>
+        <p class="text-xs text-slate-400 ch-label">游戏单文件体积 [SHIPPED]</p>
+      </div>
+      <div class="glow-card rounded-xl p-5 text-center">
+        <p class="seg text-4xl font-bold mb-1">01</p>
+        <p class="text-xs text-slate-400 ch-label">个人网站作品 [LIVE]</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CH.06 联系 ============ -->
+  <section class="reveal mb-20" id="contact">
+    <div class="flex items-baseline gap-3 mb-8">
+      <span class="ch-label text-signal text-lg">CH.06</span>
+      <span class="ch-label text-slate-500">//</span>
+      <h2 class="text-2xl font-bold text-white">建立连接 <span class="ch-label text-xs text-slate-500 ml-2">ESTABLISH_LINK</span></h2>
+    </div>
+    <div class="glow-card rounded-xl p-6 md:p-8">
+      <p class="text-slate-300 mb-6">信号已就绪，欢迎接入。点击任意通道即可复制。</p>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <button onclick="copyText('212089996@qq.com', this)" class="flex items-center gap-3 p-4 rounded-lg border border-slate-700 hover:border-signal hover:bg-signal/5 transition text-left group">
+          <i data-lucide="mail" class="w-5 h-5 text-signal"></i>
+          <span class="flex-1"><span class="ch-label text-xs text-slate-500 block">EMAIL</span><span class="text-white text-sm">212089996@qq.com</span></span>
+          <i data-lucide="copy" class="w-4 h-4 text-slate-600 group-hover:text-signal transition"></i>
+        </button>
+        <button onclick="copyText('github.com/YM486-desuwa', this)" class="flex items-center gap-3 p-4 rounded-lg border border-slate-700 hover:border-signal hover:bg-signal/5 transition text-left group">
+          <i data-lucide="code" class="w-5 h-5 text-signal"></i>
+          <span class="flex-1"><span class="ch-label text-xs text-slate-500 block">GITHUB</span><span class="text-white text-sm">github.com/YM486-desuwa</span></span>
+          <i data-lucide="copy" class="w-4 h-4 text-slate-600 group-hover:text-signal transition"></i>
+        </button>
+        <button onclick="copyText('15150747091', this)" class="flex items-center gap-3 p-4 rounded-lg border border-slate-700 hover:border-signal hover:bg-signal/5 transition text-left group">
+          <i data-lucide="phone" class="w-5 h-5 text-signal"></i>
+          <span class="flex-1"><span class="ch-label text-xs text-slate-500 block">PHONE</span><span class="text-white text-sm">15150747091</span></span>
+          <i data-lucide="copy" class="w-4 h-4 text-slate-600 group-hover:text-signal transition"></i>
+        </button>
+        <button onclick="copyText('南京 · 南京工程学院', this)" class="flex items-center gap-3 p-4 rounded-lg border border-slate-700 hover:border-signal hover:bg-signal/5 transition text-left group">
+          <i data-lucide="map-pin" class="w-5 h-5 text-signal"></i>
+          <span class="flex-1"><span class="ch-label text-xs text-slate-500 block">LOCATION</span><span class="text-white text-sm">南京 · 南京工程学院</span></span>
+          <i data-lucide="copy" class="w-4 h-4 text-slate-600 group-hover:text-signal transition"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="text-center pt-8 border-t border-slate-800/60">
+    <p class="ch-label text-xs text-slate-600">© 2026 叶茂 · 南京工程学院 · SIGNAL STABLE · 系统持续调频中 · 下次更新：大一下学期</p>
+  </footer>
+
+</main>
+
+<div class="copy-toast" id="toast">// COPIED TO CLIPBOARD ✓</div>
+
+<script>
+  lucide.createIcons();
+
+  /* 频谱柱状图生成 */
+  document.querySelectorAll('.spectrum').forEach(el => {
+    const level = parseInt(el.dataset.level) || 50;
+    const bars = 14;
+    let html = '';
+    for (let i = 0; i < bars; i++) {
+      // 高度依据 level 加随机起伏，中间高两边低形成频谱感
+      const center = Math.sin((i / bars) * Math.PI);
+      const base = (level / 100) * (0.4 + center * 0.6);
+      const h = Math.max(8, base * 100 * (0.7 + Math.random() * 0.5));
+      const delay = (i * 0.08).toFixed(2);
+      html += `<span class="bar" style="height:${h}%; animation-delay:${delay}s"></span>`;
+    }
+    el.innerHTML = html;
+  });
+
+  /* 滚动显现 */
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  /* 打字机 */
+  const phrases = ['通信工程 · 大一在读', 'AI 工具爱好者', '独立游戏开发者', '正在接收信号…'];
+  const typer = document.getElementById('typer');
+  let pi = 0, ci = 0, deleting = false;
+  function type() {
+    const cur = phrases[pi];
+    if (!deleting) { typer.textContent = cur.slice(0, ++ci); if (ci === cur.length) { deleting = true; setTimeout(type, 1600); return; } }
+    else { typer.textContent = cur.slice(0, --ci); if (ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; } }
+    setTimeout(type, deleting ? 40 : 70);
+  }
+  type();
+
+  /* 时钟 */
+  function tick() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    document.getElementById('clock').textContent = `TX_TIME ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* 点击复制 */
+  function copyText(text, btn) {
+    navigator.clipboard?.writeText(text).catch(() => {});
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1600);
+  }
+</script>
+</body>
+</html>
